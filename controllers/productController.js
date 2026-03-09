@@ -1,69 +1,78 @@
-// controllers/productController.js
-const productQueries = require("../queries/productQueries");
+// importiamo la connessione al DB
+const connection = require('../db/dbConnection');
 
-// GET /api/products - lista prodotti con filtri e paginazione
-const getAllProducts = async (req, res, next) => {
-  try {
-    let results = await productQueries.getAllProducts();
+// funzione per ottenere tutti i prodotti
+function index(req, res) {
 
-    // Filtri per categoria
-    if (req.query.category) {
-      results = results.filter(p => p.category === req.query.category);
-    }
+  // prepariamo la query
+  const sql = 'SELECT * FROM products';
 
-    // Paginazione
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const start = (page - 1) * limit;
-    const end = start + limit;
+  // eseguiamo la query
+  connection.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: 'Database query failed' });
 
-    res.json({ success: true, data: results.slice(start, end) });
-  } catch (err) {
-    next(err);
-  }
-};
+    // creo una copia dei risultati con eventuale path immagini
+    const products = results.map(product => {
+      return {
+        ...product,
+        image_url: req.imagePath + product.image_url // se hai campo image
+      }
+    });
 
-// GET /api/products/:slug - singolo prodotto
-const getProductBySlug = async (req, res, next) => {
-  try {
-    const product = await productQueries.getProductBySlug(req.params.slug);
-    if (!product) return res.status(404).json({ error: "Product not found" });
-    res.json({ success: true, data: product });
-  } catch (err) {
-    next(err);
-  }
-};
+    res.json(products);
 
-// POST /api/products - crea nuovo prodotto
-const createProduct = async (req, res, next) => {
-  try {
-    const newProduct = await productQueries.createProduct(req.body);
-    res.status(201).json({ success: true, data: newProduct });
-  } catch (err) {
-    next(err);
-  }
-};
+  });
+}
 
-// PUT /api/products/:slug - aggiorna prodotto
-const updateProduct = async (req, res, next) => {
-  try {
-    const updated = await productQueries.updateProduct(req.params.slug, req.body);
-    if (!updated) return res.status(404).json({ error: "Product not found" });
-    res.json({ success: true, data: updated });
-  } catch (err) {
-    next(err);
-  }
-};
+// funzione per ottenere un prodotto per slug
+function show(req, res) {
 
-// DELETE /api/products/:slug - elimina prodotto
-const deleteProduct = async (req, res, next) => {
-  try {
-    const deleted = await productQueries.deleteProduct(req.params.slug);
-    if (!deleted) return res.status(404).json({ error: "Product not found" });
-    res.json({ success: true, data: deleted });
-  } catch (err) {
-    next(err);
-  }
-};
+  // Prendiamo lo slug dai parametri
+  const { slug } = req.params;
 
-module.exports = { getAllProducts, getProductBySlug, createProduct, updateProduct, deleteProduct };
+  // query per il prodotto
+  const productSql = 'SELECT * FROM products WHERE slug = ?';
+
+  // query per tutte le immagini di un singolo prodotto
+  const productImageSql = 'SELECT * FROM product_images WHERE product_id = ?';
+
+  connection.query(productSql, [slug], (err, productResults) => {
+    if (err) return res.status(500).json({ error: 'Database query failed' });
+    if (productResults.length === 0) return res.status(404).json({ error: 'Product not found' });
+
+    // Salviamo il risultato in una costante
+    const product = productResults[0];
+
+    // costruisco url immagine principale
+    product.image_url = req.imagePath + product.image_url;
+
+    // chiammata  slug secondaria per recupero product_image del propdotto
+    connection.query(productImageSql, [product.id], (err, productImageResults) => {
+      if (err) return res.status(500).json({ error: 'Database query failed' });
+
+      // Creiamo un nuovo array "images" a partire dai risultati della query
+      // imageResults è un array di oggetti come { id, product_id, image_url }
+      const images = productImageResults.map(img => {
+
+        // Per ogni oggetto immagine "img":
+        return {
+          // Copiamo tutte le proprietà originali dell'oggetto (id, product_id, image_url)
+          ...img,
+
+          // Sovrascriviamo image_url per creare l'URL completo
+          // req.imagePath = percorso base delle immagini sul server, es: "http://localhost:3000/images/"
+          // img.image_url = nome del file salvato nel DB, es: "zippo-1.jpg"
+          // Risultato finale: "http://localhost:3000/images/zippo-1.jpg"
+          image_url: req.imagePath + img.image_url
+        };
+      });
+
+      product.product_images = images;
+
+      res.json(product);
+
+    });
+  });
+}
+
+module.exports = { index, show };

@@ -1,8 +1,8 @@
 const express = require("express");
-//const cors = require("cors");//CORS METTE IN RELAZIONE LE PORTE FE E BE
+const app = express();
+require('dotenv').config();
+const port = process.env.PORT || 3000;
 
-// IMPORTO CONNESSIONE DB
-const dbConnection = require("./db/dbConnection");
 
 const productRouter = require("./routers/productRouter");
 const orderRouter = require("./routers/orderRouter");
@@ -11,10 +11,15 @@ const discountRouter = require("./routers/discountRouter");
 const notFoundPage = require("./middlewares/notFoundPage");
 const errorHandler = require("./middlewares/errorHandler");
 
+// import del middelware di gestione di path imgs
+const imagePathMiddleware = require("./middlewares/imagePath");
 
-const app = express();
+// attivazioone middelware di gestione di path imgs
+app.use(imagePathMiddleware);
 
-const PORT = 3000;
+// Attivo cartella public per uso file statici
+app.use(express.static('public'));
+
 
 //app.use(cors());
 app.use(express.json());
@@ -30,8 +35,8 @@ app.use(notFoundPage);
 app.use(errorHandler);
 
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
 })
 
 
