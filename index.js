@@ -14,8 +14,8 @@ app.use(cors({
 
 //import dei router 
 const productRouter = require("./routers/productRouter");
-const orderRouter = require("./routers/orderRouter");
-// const discountRouter = require("./routers/discountRouter");
+// const orderRouter = require("./routers/orderRouter");
+const discountRouter = require("./routers/discountRouter");
 
 // import del middelware di gestione di rotta inesistente
 const notFoundPage = require("./middlewares/notFoundPage");
@@ -32,14 +32,14 @@ app.use(imagePathMiddleware);
 // Attivo cartella public per uso file statici
 app.use(express.static('public'));
 
-//app.use(cors());
+app.use(cors());
 app.use(express.json());
 
 
 // rotte API
  app.use("/api/products", productRouter);
- app.use("/api/orders", orderRouter);
-// app.use("/api/discounts", discountRouter);
+// app.use("/api/orders", orderRouter);
+ app.use("/api/discounts", discountRouter);
 
 // registriamo middelware di gestione rotta inesistente
 app.use(notFoundPage);
