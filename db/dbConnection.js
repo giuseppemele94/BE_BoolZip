@@ -1,4 +1,5 @@
 const mysql = require(`mysql2`);
+// Carica le variabili d'ambiente dal file `.env` nella proprietà process.env.
 require('dotenv').config();
 
 const dbConnection = mysql.createConnection({
