@@ -3,6 +3,15 @@ const app = express();
 require('dotenv').config();
 const port = process.env.PORT || 3000;
 
+// Importiamo il middleware Cors
+const cors = require("cors");
+
+// Middleware per il CORS
+app.use(cors({
+    origin:'http://localhost:5173'
+}));
+
+
 //import dei router 
 const productRouter = require("./routers/productRouter");
 // const orderRouter = require("./routers/orderRouter");
