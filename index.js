@@ -32,7 +32,7 @@ app.use(imagePathMiddleware);
 // Attivo cartella public per uso file statici
 app.use(express.static('public'));
 
-//app.use(cors());
+app.use(cors());
 app.use(express.json());
 
 

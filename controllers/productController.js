@@ -5,7 +5,22 @@ const connection = require('../db/dbConnection');
 function index(req, res) {
 
   // prepariamo la query
-  const sql = 'SELECT * FROM products';
+  const sql = `
+        SELECT 
+          products.id,
+          products.name,
+          products.price,
+          products.description,
+          products.slug,
+          products.image_url,
+          materials.material AS material,
+          sizes.size AS size,
+          categories.name AS category
+        FROM products
+        JOIN materials ON products.material_id = materials.id
+        JOIN sizes ON products.size_id = sizes.id
+        JOIN categories ON products.category_id = categories.id
+          `;
 
   // eseguiamo la query
   connection.query(sql, (err, results) => {
@@ -31,7 +46,23 @@ function show(req, res) {
   const { slug } = req.params;
 
   // query per il prodotto
-  const productSql = 'SELECT * FROM products WHERE slug = ?';
+  const productSql = `
+        SELECT 
+          products.id,
+          products.name,
+          products.price,
+          products.description,
+          products.slug,
+          products.image_url,
+          materials.material AS material,
+          sizes.size AS size,
+          categories.name AS category
+        FROM products
+        JOIN materials ON products.material_id = materials.id
+        JOIN sizes ON products.size_id = sizes.id
+        JOIN categories ON products.category_id = categories.id
+        WHERE products.slug = ?
+        `;
 
   // query per tutte le immagini di un singolo prodotto
   const productImageSql = 'SELECT * FROM product_images WHERE product_id = ?';
