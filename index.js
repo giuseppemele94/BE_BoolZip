@@ -14,7 +14,7 @@ app.use(cors({
 
 //import dei router 
 const productRouter = require("./routers/productRouter");
-// const orderRouter = require("./routers/orderRouter");
+const orderRouter = require("./routers/orderRouter");
 // const discountRouter = require("./routers/discountRouter");
 
 // import del middelware di gestione di rotta inesistente
@@ -38,7 +38,7 @@ app.use(express.json());
 
 // rotte API
  app.use("/api/products", productRouter);
-// app.use("/api/orders", orderRouter);
+ app.use("/api/orders", orderRouter);
 // app.use("/api/discounts", discountRouter);
 
 // registriamo middelware di gestione rotta inesistente
