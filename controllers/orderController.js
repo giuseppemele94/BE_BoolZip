@@ -28,6 +28,7 @@ function show(req, res) {
     // query SQL
     const sql = 'SELECT * FROM orders WHERE id = ?';
 
+    // eseguiamo la query
     connection.query(sql, [id], (err, results) => {
         if (err) return res.status(500).json({ error: 'Database query failed' });
         if (results.length === 0) return res.status(404).json({ error: 'Order not found' });
@@ -50,20 +51,6 @@ function store(req, res) {
         VALUES (?, ?, ?, ?)
     `;
 
-    // {
-    //     "id": 1,
-    //     "session_id": "sess_abc123",
-    //     "created_date": "2026-03-06T16:48:08.000Z",
-    //     "total_amount": "89.80",
-    //     "customer_name": "Luca",
-    //     "customer_email": "luca@email.it",
-    //     "customer_address": "Via Roma 10 Milano",
-    //     "customer_lastname": "Rossi",
-    //     "customer_phone": "3331234567",
-    //     "customer_billing_address,": "Via Roma 10 Milano",
-    //     " discount_code,": null,
-    //     ", discount_value": null
-    // },
 
     // eseguiamo la query
     connection.query(sql, [customer_name, customer_lastname, customer_phone, custumer_email, custumer_address, customer_billing_address, total_amount, discount_code, discount_value], (err, results) => {
@@ -73,6 +60,8 @@ function store(req, res) {
         // risposta
         res.status(201).json({
             message: 'Order created',
+            // L'ID della nuova risorsa (ordine) generata dal database,
+            // tipicamente restituito da un'operazione di INSERT in MySQL tramite `results.insertId`
             id: results.insertId
         });
 

@@ -26,11 +26,12 @@ function index(req, res) {
   connection.query(sql, (err, results) => {
     if (err) return res.status(500).json({ error: 'Database query failed' });
 
-    // creo una copia dei risultati con eventuale path immagini
+    // creo un nuovo array di prodotti partendo dai risultati del database
+    // e aggiungo/modifico il campo image_url con il percorso completo dell'immagine
     const products = results.map(product => {
       return {
-        ...product,
-        image_url: req.imagePath + product.image_url // se hai campo image
+        ...product, // copia tutte le proprietà originali del prodotto
+        image_url: req.imagePath + product.image_url // concatena il path base con il nome dell'immagine
       }
     });
 
@@ -67,6 +68,7 @@ function show(req, res) {
   // query per tutte le immagini di un singolo prodotto
   const productImageSql = 'SELECT * FROM product_images WHERE product_id = ?';
 
+  // eseguiamo la query
   connection.query(productSql, [slug], (err, productResults) => {
     if (err) return res.status(500).json({ error: 'Database query failed' });
     if (productResults.length === 0) return res.status(404).json({ error: 'Product not found' });
@@ -98,6 +100,7 @@ function show(req, res) {
         };
       });
 
+      // assegna alla proprietà "product_images" dell'oggetto product l'array di immagini
       product.product_images = images;
 
       res.json(product);

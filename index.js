@@ -1,6 +1,10 @@
 const express = require("express");
 const app = express();
+
+// carica le variabili di ambiente dal file .env
 require('dotenv').config();
+// usa la porta definita nelle variabili di ambiente,
+// se non esiste usa la porta 3000
 const port = process.env.PORT || 3000;
 
 // Importiamo il middleware Cors
@@ -32,7 +36,7 @@ app.use(imagePathMiddleware);
 // Attivo cartella public per uso file statici
 app.use(express.static('public'));
 
-app.use(cors());
+// Registro il body-parser per "application/json"
 app.use(express.json());
 
 
