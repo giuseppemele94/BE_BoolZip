@@ -13,6 +13,7 @@ function index(req, res) {
           products.description,
           products.slug,
           products.image_url,
+          products.created_at,
           materials.material AS material,
           sizes.size AS size,
           categories.name AS category
@@ -109,4 +110,29 @@ function show(req, res) {
   });
 }
 
-module.exports = { index, show };
+function getRecentProducts(req, res) {
+
+  // query per il prodotto
+    const sql = 
+        `SELECT *
+        FROM products
+        WHERE created_at >= NOW() - INTERVAL 10 DAY
+        ORDER BY created_at DESC`
+    ;
+
+    // eseguiamo la query
+    connection.query(sql, (err, results) => {
+        if (err) {
+            return res.status(500).json({
+                error: "Database query failed"
+            });
+        }
+
+        res.json(results);
+    });
+}
+
+
+
+
+module.exports = { index, show, getRecentProducts };
