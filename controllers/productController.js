@@ -1,7 +1,9 @@
 // importiamo la connessione al DB
 const connection = require('../db/dbConnection');
 
-// funzione per ottenere tutti i prodotti
+// ==============================
+// FUNZIONE: ELENCO PRODOTTI
+// ==============================
 function index(req, res) {
 
   /* recuperiamo eventuali parametri di ricerca e filtro dalla query string
@@ -33,7 +35,7 @@ function index(req, res) {
         JOIN sizes ON products.size_id = sizes.id
         JOIN categories ON products.category_id = categories.id
         WHERE 1 = 1
-          `;
+  `;
 
   /* 
      array che conterrà i valori dei parametri della query
@@ -73,40 +75,42 @@ function index(req, res) {
     sql += " AND products.material_id = ?";
     params.push(material);
   }
-  
+
   // filtro per prezzo minimo
   if (price_min) {
     sql += " AND products.price >= ?";
     params.push(price_min);
   }
+
   // filtro per prezzo massimo
   if (price_max) {
     sql += " AND products.price <= ?";
     params.push(price_max);
   }
+
   /* esempio chiamate possibili:
     /api/products?price_min=10&price_max=50
     /api/products?category=2&price_max=100&search=zippo
-  */  
+  */
+
   // eseguiamo la query
   connection.query(sql, params, (err, results) => {
     if (err) return res.status(500).json({ error: 'Database query failed' });
 
     // creo un nuovo array di prodotti partendo dai risultati del database
     // e aggiungo/modifico il campo image_url con il percorso completo dell'immagine
-    const products = results.map(product => {
-      return {
-        ...product, // copia tutte le proprietà originali del prodotto
-        image_url: req.imagePath + product.image_url // concatena il path base con il nome dell'immagine
-      }
-    });
+    const products = results.map(product => ({
+      ...product, // copia tutte le proprietà originali del prodotto
+      image_url: req.imagePath + product.image_url // concatena il path base con il nome dell'immagine
+    }));
 
     res.json(products);
-
   });
 }
 
-// funzione per ottenere un prodotto per slug
+// ==============================
+// FUNZIONE: PRODOTTO SINGOLO
+// ==============================
 function show(req, res) {
 
   // Prendiamo lo slug dai parametri
@@ -134,11 +138,10 @@ function show(req, res) {
     WHERE products.slug = ?
         `;
 
-
   // query per tutte le immagini di un singolo prodotto
   const productImageSql = 'SELECT * FROM product_images WHERE product_id = ?';
 
-  // eseguiamo la query
+  // eseguiamo la query principale
   connection.query(productSql, [slug], (err, productResults) => {
     if (err) return res.status(500).json({ error: 'Database query failed' });
     if (productResults.length === 0) return res.status(404).json({ error: 'Product not found' });
@@ -154,25 +157,56 @@ function show(req, res) {
       if (err) return res.status(500).json({ error: 'Database query failed' });
 
       // Creiamo un nuovo array "images" a partire dai risultati della query
-      const images = productImageResults.map(img => {
-
-        return {
-          ...img,
-
-          // costruzione url completo immagine
-          image_url: req.imagePath + img.image_url
-        };
-      });
+      const images = productImageResults.map(img => ({
+        ...img,
+        // costruzione url completo immagine
+        image_url: req.imagePath + img.image_url
+      }));
 
       // assegna alla proprietà "product_images" dell'oggetto product l'array di immagini
       product.product_images = images;
 
-      res.json(product);
+      // ==============================
+      //  PRODOTTI CORRELATI
+      // - basati su categoria, materiale o taglia del prodotto corrente
+      // - escludiamo il prodotto stesso
+      // - limite 4 prodotti casuali
+      // ==============================
+      const relatedSql = `
+        SELECT 
+          id,
+          name,
+          price,
+          slug,
+          image_url
+        FROM products
+        WHERE category_id = ?
+          AND id != ?
+          AND (material_id = ? OR size_id = ?)
+        ORDER BY RAND()
+        LIMIT 4
+      `;
+      const relatedParams = [product.category_id, product.id, product.material_id, product.size_id];
 
+      connection.query(relatedSql, relatedParams, (err, relatedResults) => {
+        if (err) return res.status(500).json({ error: 'Database query failed' });
+
+        // aggiungiamo URL completo anche ai prodotti correlati
+        product.related_products = relatedResults.map(p => ({
+          ...p,
+          image_url: req.imagePath + p.image_url
+        }));
+
+        // invio risposta completa con immagini e correlati
+        res.json(product);
+      });
     });
   });
 }
 
+// ==============================
+// FUNZIONE: PRODOTTI RECENTI
+// ==============================
 function getRecentProducts(req, res) {
 
   // query per ottenere gli ultimi prodotti creati negli ultimi 10 giorni
@@ -186,39 +220,37 @@ function getRecentProducts(req, res) {
 
   // eseguiamo la query
   connection.query(sql, (err, results) => {
-    if (err) {
-      return res.status(500).json({
-        error: "Database query failed"
-      });
-    }
+    if (err) return res.status(500).json({ error: "Database query failed" });
 
     // aggiungiamo l'imagePath a ciascun prodotto
-    const productsWithImages = results.map(product => {
-      return {
-        ...product,
-        image_url: req.imagePath + product.image_url
-      };
-    });
+    const productsWithImages = results.map(product => ({
+      ...product,
+      image_url: req.imagePath + product.image_url
+    }));
 
     res.json(productsWithImages);
   });
 }
 
+// ==============================
+// FUNZIONE: PRODOTTI PIÙ VENDUTI
+// ==============================
 function getTopProducts(req, res) {
-  const sql = `SELECT 
-                      p.id,
-                      p.name,
-                      p.price,
-                      p.description,
-                      p.image_url,
-                      p.slug,
-                      SUM(op.quantity) AS total_sold
-                  FROM order_product op
-                  JOIN products p ON p.id = op.product_id
-                  GROUP BY p.id, p.name, p.price, p.description, p.image_url, p.slug
-                  ORDER BY total_sold DESC
-                  LIMIT 4;
-                  `;
+  const sql = `
+    SELECT 
+      p.id,
+      p.name,
+      p.price,
+      p.description,
+      p.image_url,
+      p.slug,
+      SUM(op.quantity) AS total_sold
+    FROM order_product op
+    JOIN products p ON p.id = op.product_id
+    GROUP BY p.id, p.name, p.price, p.description, p.image_url, p.slug
+    ORDER BY total_sold DESC
+    LIMIT 4;
+  `;
 
   connection.query(sql, (err, results) => {
     if (err) return res.status(500).json({ error: 'Database query failed' });
