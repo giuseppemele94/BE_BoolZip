@@ -50,22 +50,26 @@ function show(req, res) {
   // query per il prodotto
   const productSql = `
         SELECT 
-          products.id,
-          products.name,
-          products.price,
-          products.description,
-          products.slug,
-          products.image_url,
-          materials.material AS material,
-          sizes.size AS size,
-          categories.name AS category
-        FROM products
-        JOIN materials ON products.material_id = materials.id
-        JOIN sizes ON products.size_id = sizes.id
-        JOIN categories ON products.category_id = categories.id
-        WHERE products.slug = ?
+        products.id,
+        products.name,
+        products.price,
+        products.description,
+        products.slug,
+        products.image_url,
+        materials.id AS material_id,
+        materials.material AS material,
+        sizes.id AS size_id,
+        sizes.size AS size,
+        categories.id AS category_id,
+        categories.name AS category
+    FROM products
+    JOIN materials ON products.material_id = materials.id
+    JOIN sizes ON products.size_id = sizes.id
+    JOIN categories ON products.category_id = categories.id
+    WHERE products.slug = ?
         `;
-
+        
+    
   // query per tutte le immagini di un singolo prodotto
   const productImageSql = 'SELECT * FROM product_images WHERE product_id = ?';
 
@@ -143,7 +147,36 @@ function getRecentProducts(req, res) {
   });
 }
 
+function getTopProducts(req, res) {
+    const sql = `SELECT 
+                      p.id,
+                      p.name,
+                      p.price,
+                      p.description,
+                      p.image_url,
+                      p.slug,
+                      SUM(op.quantity) AS total_sold
+                  FROM order_product op
+                  JOIN products p ON p.id = op.product_id
+                  GROUP BY p.id, p.name, p.price, p.description, p.image_url, p.slug
+                  ORDER BY total_sold DESC
+                  LIMIT 4;
+                  `;
+
+    connection.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: 'Database query failed' });
+
+        // aggiungiamo imagePath se usiamo immagini locali
+        const products = results.map(p => ({
+            ...p,
+            image_url: req.imagePath + p.image_url
+        }));
+
+        res.json(products);
+    });
+}
 
 
 
-module.exports = { index, show, getRecentProducts };
+
+module.exports = { index, show, getRecentProducts, getTopProducts };
