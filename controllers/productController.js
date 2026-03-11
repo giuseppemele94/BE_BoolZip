@@ -4,8 +4,19 @@ const connection = require('../db/dbConnection');
 // funzione per ottenere tutti i prodotti
 function index(req, res) {
 
-  // prepariamo la query
-  const sql = `
+  /* recuperiamo eventuali parametri di ricerca e filtro dalla query string
+     esempio chiamate possibili:
+     /api/products?search=zippo
+     /api/products?category=2
+     /api/products?size=1&material=3
+  */
+  const { search, category, size, material, price_min, price_max } = req.query;
+
+  /* 
+     trasformiamo la query statica in una query dinamica
+     "WHERE 1=1" ci permette di aggiungere facilmente i filtri con AND
+  */
+  let sql = `
         SELECT 
           products.id,
           products.name,
@@ -21,10 +32,64 @@ function index(req, res) {
         JOIN materials ON products.material_id = materials.id
         JOIN sizes ON products.size_id = sizes.id
         JOIN categories ON products.category_id = categories.id
+        WHERE 1 = 1
           `;
 
+  /* 
+     array che conterrà i valori dei parametri della query
+     verrà passato a connection.query per evitare SQL injection
+  */
+  let params = [];
+
+  /* 
+     filtro di ricerca testuale sul nome del prodotto
+     utilizziamo LIKE per permettere ricerche parziali
+  */
+  if (search) {
+    sql += " AND products.name LIKE ?";
+    params.push(`%${search}%`);
+  }
+
+  /* 
+     filtro per categoria
+  */
+  if (category) {
+    sql += " AND products.category_id = ?";
+    params.push(category);
+  }
+
+  /* 
+     filtro per taglia
+  */
+  if (size) {
+    sql += " AND products.size_id = ?";
+    params.push(size);
+  }
+
+  /* 
+     filtro per materiale
+  */
+  if (material) {
+    sql += " AND products.material_id = ?";
+    params.push(material);
+  }
+  
+  // filtro per prezzo minimo
+  if (price_min) {
+    sql += " AND products.price >= ?";
+    params.push(price_min);
+  }
+  // filtro per prezzo massimo
+  if (price_max) {
+    sql += " AND products.price <= ?";
+    params.push(price_max);
+  }
+  /* esempio chiamate possibili:
+    /api/products?price_min=10&price_max=50
+    /api/products?category=2&price_max=100&search=zippo
+  */  
   // eseguiamo la query
-  connection.query(sql, (err, results) => {
+  connection.query(sql, params, (err, results) => {
     if (err) return res.status(500).json({ error: 'Database query failed' });
 
     // creo un nuovo array di prodotti partendo dai risultati del database
@@ -68,8 +133,8 @@ function show(req, res) {
     JOIN categories ON products.category_id = categories.id
     WHERE products.slug = ?
         `;
-        
-    
+
+
   // query per tutte le immagini di un singolo prodotto
   const productImageSql = 'SELECT * FROM product_images WHERE product_id = ?';
 
@@ -84,23 +149,17 @@ function show(req, res) {
     // costruisco url immagine principale
     product.image_url = req.imagePath + product.image_url;
 
-    // chiammata  slug secondaria per recupero product_image del propdotto
+    // chiammata slug secondaria per recupero product_image del prodotto
     connection.query(productImageSql, [product.id], (err, productImageResults) => {
       if (err) return res.status(500).json({ error: 'Database query failed' });
 
       // Creiamo un nuovo array "images" a partire dai risultati della query
-      // imageResults è un array di oggetti come { id, product_id, image_url }
       const images = productImageResults.map(img => {
 
-        // Per ogni oggetto immagine "img":
         return {
-          // Copiamo tutte le proprietà originali dell'oggetto (id, product_id, image_url)
           ...img,
 
-          // Sovrascriviamo image_url per creare l'URL completo
-          // req.imagePath = percorso base delle immagini sul server, es: "http://localhost:3000/images/"
-          // img.image_url = nome del file salvato nel DB, es: "zippo-1.jpg"
-          // Risultato finale: "http://localhost:3000/images/zippo-1.jpg"
+          // costruzione url completo immagine
           image_url: req.imagePath + img.image_url
         };
       });
@@ -137,18 +196,16 @@ function getRecentProducts(req, res) {
     const productsWithImages = results.map(product => {
       return {
         ...product,
-        // costruiamo l'URL completo dell'immagine principale
         image_url: req.imagePath + product.image_url
       };
     });
 
-    // ritorniamo i prodotti con il path completo delle immagini
     res.json(productsWithImages);
   });
 }
 
 function getTopProducts(req, res) {
-    const sql = `SELECT 
+  const sql = `SELECT 
                       p.id,
                       p.name,
                       p.price,
@@ -163,20 +220,16 @@ function getTopProducts(req, res) {
                   LIMIT 4;
                   `;
 
-    connection.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: 'Database query failed' });
+  connection.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: 'Database query failed' });
 
-        // aggiungiamo imagePath se usiamo immagini locali
-        const products = results.map(p => ({
-            ...p,
-            image_url: req.imagePath + p.image_url
-        }));
+    const products = results.map(p => ({
+      ...p,
+      image_url: req.imagePath + p.image_url
+    }));
 
-        res.json(products);
-    });
+    res.json(products);
+  });
 }
-
-
-
 
 module.exports = { index, show, getRecentProducts, getTopProducts };
