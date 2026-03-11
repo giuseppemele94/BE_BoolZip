@@ -112,24 +112,35 @@ function show(req, res) {
 
 function getRecentProducts(req, res) {
 
-  // query per il prodotto
-    const sql = 
-        `SELECT *
-        FROM products
-        WHERE created_at >= NOW() - INTERVAL 10 DAY
-        ORDER BY created_at DESC`
-    ;
+  // query per ottenere gli ultimi prodotti creati negli ultimi 10 giorni
+  const sql = `
+    SELECT *
+    FROM products
+    WHERE created_at >= NOW() - INTERVAL 10 DAY
+    ORDER BY created_at DESC
+    LIMIT 4
+  `;
 
-    // eseguiamo la query
-    connection.query(sql, (err, results) => {
-        if (err) {
-            return res.status(500).json({
-                error: "Database query failed"
-            });
-        }
+  // eseguiamo la query
+  connection.query(sql, (err, results) => {
+    if (err) {
+      return res.status(500).json({
+        error: "Database query failed"
+      });
+    }
 
-        res.json(results);
+    // aggiungiamo l'imagePath a ciascun prodotto
+    const productsWithImages = results.map(product => {
+      return {
+        ...product,
+        // costruiamo l'URL completo dell'immagine principale
+        image_url: req.imagePath + product.image_url
+      };
     });
+
+    // ritorniamo i prodotti con il path completo delle immagini
+    res.json(productsWithImages);
+  });
 }
 
 
