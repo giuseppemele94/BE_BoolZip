@@ -7,13 +7,19 @@ const router = express.Router();
 // importiamo il controller
 const orderController = require('../controllers/orderController');
 
-// INDEX → GET api/orders
+
+// tutte le rotte degli ordini
+
+// ottenere tutti gli ordini
 router.get("/", orderController.index);
 
-// SHOW → ordine per id
+// ottenere un singolo ordine
 router.get("/:id", orderController.show);
 
-// rotta di CREATE → POST api/orders
+// creare un ordine
 router.post("/", orderController.store);
+
+// aggiungere prodotto all'ordine
+router.post("/:id/products", orderController.addProductToOrder);
 
 module.exports = router;
