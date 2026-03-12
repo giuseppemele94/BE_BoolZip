@@ -273,9 +273,25 @@ function checkout(req, res) {
     } = req.body;
 
     // calcoliamo il totale dell'ordine partendo dai prodotti
-    let total_amount = products.reduce((acc, prod) => acc + prod.price * prod.quantity, 0);
+    let subtotal_amount = products.reduce(
+        (acc, prod) => acc + prod.price * prod.quantity,
+        0
+    );
 
-    // arrotondiamo a due decimali
+    subtotal_amount = parseFloat(subtotal_amount.toFixed(2));
+
+    // Applico lo sconto, se presente
+    let final_discount_value = Number(discount_value) || 0;
+
+    // Evito che lo sconto superi il subtotale
+    if (final_discount_value > subtotal_amount) {
+        final_discount_value = subtotal_amount;
+    }
+
+    // Calcolo il totale finale da salvare
+    let total_amount = subtotal_amount - final_discount_value;
+
+    // Arrotondo il totale finale
     total_amount = parseFloat(total_amount.toFixed(2));
 
     // query SQL per inserire l'ordine nella tabella orders
@@ -309,7 +325,7 @@ function checkout(req, res) {
             customer_billing_address,
             total_amount,
             discount_code || null, // se non presente, inseriamo null
-            discount_value || 0,   // se non presente, inseriamo 0
+            discount_value,   // se non presente, inseriamo 0
             session_id
         ],
         (err, orderResults) => {
@@ -420,7 +436,7 @@ function checkout(req, res) {
                             <h3>Sconto applicato</h3>
                                 <p>
                                 Codice sconto: ${discount_code ? discount_code : 'Nessuno'}<br>
-                                Valore: ${discount_value ? `- ${discount_value.toFixed(2)} €` : '- 0.00 €'}
+                                Valore: ${final_discount_value > 0 ? `- ${final_discount_value.toFixed(2)} €` : '- 0.00 €'}
                                 </p>
 
                             
