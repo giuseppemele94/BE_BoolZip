@@ -92,166 +92,166 @@ function show(req, res) {
 
 
 
-// funzione per creare un nuovo ordine (checkout)
-function store(req, res) {
+// // funzione per creare un nuovo ordine (checkout)
+// function store(req, res) {
 
-    // recuperiamo i dati dal body
-    const {
-        customer_name,
-        customer_lastname,
-        customer_phone,
-        customer_email,
-        customer_address,
-        customer_billing_address,
-        total_amount,
-        discount_code,
-        discount_value,
-        session_id
-    } = req.body;
+//     // recuperiamo i dati dal body
+//     const {
+//         customer_name,
+//         customer_lastname,
+//         customer_phone,
+//         customer_email,
+//         customer_address,
+//         customer_billing_address,
+//         total_amount,
+//         discount_code,
+//         discount_value,
+//         session_id
+//     } = req.body;
 
-    // query SQL per inserire un nuovo ordine
-    const sql = `
-        INSERT INTO orders
-        (
-            customer_name,
-            customer_lastname,
-            customer_phone,
-            customer_email,
-            customer_address,
-            customer_billing_address,
-            total_amount,
-            discount_code,
-            discount_value,
-            session_id,
-            created_date
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    `;
+//     // query SQL per inserire un nuovo ordine
+//     const sql = `
+//         INSERT INTO orders
+//         (
+//             customer_name,
+//             customer_lastname,
+//             customer_phone,
+//             customer_email,
+//             customer_address,
+//             customer_billing_address,
+//             total_amount,
+//             discount_code,
+//             discount_value,
+//             session_id,
+//             created_date
+//         )
+//         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+//     `;
 
-    // eseguiamo la query
-    connection.query(
-        sql,
-        [
-            customer_name,
-            customer_lastname,
-            customer_phone,
-            customer_email,
-            customer_address,
-            customer_billing_address,
-            total_amount,
-            discount_code,
-            discount_value,
-            session_id
-        ],
-        (err, results) => {
+//     // eseguiamo la query
+//     connection.query(
+//         sql,
+//         [
+//             customer_name,
+//             customer_lastname,
+//             customer_phone,
+//             customer_email,
+//             customer_address,
+//             customer_billing_address,
+//             total_amount,
+//             discount_code,
+//             discount_value,
+//             session_id
+//         ],
+//         (err, results) => {
 
-            if (err) {
-                console.log(err);
-                return res.status(500).json({
-                    error: "Database query failed"
-                });
-            }
+//             if (err) {
+//                 console.log(err);
+//                 return res.status(500).json({
+//                     error: "Database query failed"
+//                 });
+//             }
 
-            /* 
-               PREPARAZIONE CONTENUTO EMAIL DI CONFERMA ORDINE
-               costruiamo il contenuto HTML della mail che verrà inviata al cliente
-            */
-            const htmlContent = `
-                <h2>Grazie per il tuo ordine, ${customer_name}!</h2>
-                <p>Il tuo ordine è stato ricevuto correttamente.</p>
-                <p><strong>ID Ordine:</strong> ${results.insertId}</p>
-                <p><strong>Totale ordine:</strong> €${total_amount}</p>
-                <p>Ti contatteremo presto per la spedizione.</p>
-            `;
+//             /* 
+//                PREPARAZIONE CONTENUTO EMAIL DI CONFERMA ORDINE
+//                costruiamo il contenuto HTML della mail che verrà inviata al cliente
+//             */
+//             const htmlContent = `
+//                 <h2>Grazie per il tuo ordine, ${customer_name}!</h2>
+//                 <p>Il tuo ordine è stato ricevuto correttamente.</p>
+//                 <p><strong>ID Ordine:</strong> ${results.insertId}</p>
+//                 <p><strong>Totale ordine:</strong> €${total_amount}</p>
+//                 <p>Ti contatteremo presto per la spedizione.</p>
+//             `;
 
-            /*
-               INVIO EMAIL DI CONFERMA ORDINE
-               utilizziamo la funzione sendOrderConfirmationEmail definita in utils/mail.js
-               passando:
-               - email del cliente
-               - oggetto della mail
-               - contenuto HTML della mail
-            */
-            sendOrderConfirmationEmail(
-                customer_email,
-                "Conferma ordine BoolZip",
-                htmlContent
-            );
+//             /*
+//                INVIO EMAIL DI CONFERMA ORDINE
+//                utilizziamo la funzione sendOrderConfirmationEmail definita in utils/mail.js
+//                passando:
+//                - email del cliente
+//                - oggetto della mail
+//                - contenuto HTML della mail
+//             */
+//             sendOrderConfirmationEmail(
+//                 customer_email,
+//                 "Conferma ordine BoolZip",
+//                 htmlContent
+//             );
 
-            // ritorniamo l'id dell'ordine appena creato
-            res.status(201).json({
-                message: "Order created",
+//             // ritorniamo l'id dell'ordine appena creato
+//             res.status(201).json({
+//                 message: "Order created",
 
-                // insertId è l'id generato automaticamente dal database
-                id: results.insertId
-            });
+//                 // insertId è l'id generato automaticamente dal database
+//                 id: results.insertId
+//             });
 
-        }
-    );
-}
+//         }
+//     );
+// }
 
 
 
-// funzione per aggiungere un prodotto ad un ordine
-function addProductToOrder(req, res) {
+// // funzione per aggiungere un prodotto ad un ordine
+// function addProductToOrder(req, res) {
 
-    // recuperiamo l'id dell'ordine dai parametri della richiesta
-    const order_id = req.params.id;
+//     // recuperiamo l'id dell'ordine dai parametri della richiesta
+//     const order_id = req.params.id;
 
-    // recuperiamo product_id e quantity dal body della richiesta JSON
-    const { product_id, quantity } = req.body;
+//     // recuperiamo product_id e quantity dal body della richiesta JSON
+//     const { product_id, quantity } = req.body;
 
-    // query SQL per prendere il prezzo del prodotto dal database
-    const productSql = `SELECT price FROM products WHERE id = ?`;
+//     // query SQL per prendere il prezzo del prodotto dal database
+//     const productSql = `SELECT price FROM products WHERE id = ?`;
 
-    // eseguiamo la query per ottenere il prezzo del prodotto
-    connection.query(productSql, [product_id], (err, productResults) => {
+//     // eseguiamo la query per ottenere il prezzo del prodotto
+//     connection.query(productSql, [product_id], (err, productResults) => {
 
-        // se c'è un errore nella query, ritorniamo errore 500
-        if (err) {
-            return res.status(500).json({ error: "Database query failed" });
-        }
+//         // se c'è un errore nella query, ritorniamo errore 500
+//         if (err) {
+//             return res.status(500).json({ error: "Database query failed" });
+//         }
 
-        // se il prodotto non esiste nel database, ritorniamo errore 404
-        if (productResults.length === 0) {
-            return res.status(404).json({ error: "Product not found" });
-        }
+//         // se il prodotto non esiste nel database, ritorniamo errore 404
+//         if (productResults.length === 0) {
+//             return res.status(404).json({ error: "Product not found" });
+//         }
 
-        // salviamo il prezzo del prodotto in una costante
-        const price = productResults[0].price;
+//         // salviamo il prezzo del prodotto in una costante
+//         const price = productResults[0].price;
 
-        // query SQL per inserire il prodotto nella tabella order_product
-        const orderProductSql = `
-            INSERT INTO order_product
-            (order_id, product_id, quantity, price)
-            VALUES (?, ?, ?, ?)
-        `;
+//         // query SQL per inserire il prodotto nella tabella order_product
+//         const orderProductSql = `
+//             INSERT INTO order_product
+//             (order_id, product_id, quantity, price)
+//             VALUES (?, ?, ?, ?)
+//         `;
 
-        // eseguiamo la query di inserimento nella tabella order_product
-        connection.query(
-            orderProductSql,
-            [order_id, product_id, quantity, price], // valori da inserire
-            (err, results) => {
+//         // eseguiamo la query di inserimento nella tabella order_product
+//         connection.query(
+//             orderProductSql,
+//             [order_id, product_id, quantity, price], // valori da inserire
+//             (err, results) => {
 
-                // se c'è un errore durante l'inserimento, logghiamolo e ritorniamo errore 500
-                if (err) {
-                    console.log(err);
-                    return res.status(500).json({
-                        error: "Database query failed"
-                    });
-                }
+//                 // se c'è un errore durante l'inserimento, logghiamolo e ritorniamo errore 500
+//                 if (err) {
+//                     console.log(err);
+//                     return res.status(500).json({
+//                         error: "Database query failed"
+//                     });
+//                 }
 
-                // se tutto va bene, ritorniamo status 201 con messaggio di conferma
-                res.status(201).json({
-                    message: "Product added to order"
-                });
+//                 // se tutto va bene, ritorniamo status 201 con messaggio di conferma
+//                 res.status(201).json({
+//                     message: "Product added to order"
+//                 });
 
-            }
-        );
+//             }
+//         );
 
-    });
+//     });
 
-}
+// }
 
 
 
@@ -462,7 +462,7 @@ function checkout(req, res) {
 module.exports = {
     index,
     show,
-    store,
-    addProductToOrder,
+    // store,
+    // addProductToOrder,
     checkout
 };

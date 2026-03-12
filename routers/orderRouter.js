@@ -16,11 +16,11 @@ router.get("/", orderController.index);
 // ottenere un singolo ordine
 router.get("/:id", orderController.show);
 
-// creare un ordine
-router.post("/", orderController.store);
+// // creare un ordine
+// router.post("/", orderController.store);
 
-// aggiungere prodotto all'ordine
-router.post("/:id/products", orderController.addProductToOrder);
+// // aggiungere prodotto all'ordine
+// router.post("/:id/products", orderController.addProductToOrder);
 
 // rotta checkout completa
 router.post("/checkout", orderController.checkout);
