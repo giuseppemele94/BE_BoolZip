@@ -97,13 +97,13 @@ function index(req, res) {
   connection.query(sql, params, (err, results) => {
     if (err) return res.status(500).json({ error: 'Database query failed' });
 
-    // // Se non ci sono prodotti che soddisfano i filtri
-    // if (results.length === 0) {
-    //   return res.status(200).json({
-    //     message: "No products found with these filters",
-    //     products: [] // array vuoto per essere coerenti con la risposta standard
-    //   });
-    // }
+    // Se non ci sono prodotti che soddisfano i filtri
+    if (results.length === 0) {
+      return res.status(200).json({
+        message: "No products found with these filters",
+        products: [] // array vuoto per essere coerenti con la risposta standard
+      });
+    }
 
     // creo un nuovo array di prodotti partendo dai risultati del database
     // e aggiungo/modifico il campo image_url con il percorso completo dell'immagine
