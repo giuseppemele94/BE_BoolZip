@@ -22,4 +22,7 @@ router.post("/", orderController.store);
 // aggiungere prodotto all'ordine
 router.post("/:id/products", orderController.addProductToOrder);
 
+// rotta checkout completa
+router.post("/checkout", orderController.checkout);
+
 module.exports = router;
