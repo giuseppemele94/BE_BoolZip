@@ -56,7 +56,7 @@ function index(req, res) {
      filtro per categoria
   */
   if (category) {
-    sql += " AND products.category_id = ?";
+    sql += " AND categories.name = ?";
     params.push(category);
   }
 
@@ -64,7 +64,7 @@ function index(req, res) {
      filtro per taglia
   */
   if (size) {
-    sql += " AND products.size_id = ?";
+    sql += " AND sizes.size = ?";
     params.push(size);
   }
 
@@ -72,7 +72,7 @@ function index(req, res) {
      filtro per materiale
   */
   if (material) {
-    sql += " AND products.material_id = ?";
+    sql += " AND materials.material = ?";
     params.push(material);
   }
 
