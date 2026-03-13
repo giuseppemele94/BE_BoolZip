@@ -100,13 +100,10 @@ function show(req, res) {
 
 
 
-// ==============================
-// FUNZIONE: CHECKOUT ORDINE
-// ==============================
-// crea un ordine, aggiunge prodotti e invia email
+// funzione di checkout: crea un ordine, aggiunge prodotti e invia email di conferma
 function checkout(req, res) {
 
-    // recuperiamo i dati dal body della richiesta
+    // recuperiamo i dati dal body della richiesta inviati dal frontend
     const {
         customer_name,
         customer_lastname,
@@ -115,28 +112,82 @@ function checkout(req, res) {
         customer_address,
         customer_billing_address,
         products,           // array prodotti {id, quantity}
-        discount_code,
-        discount_value,
-        session_id
+        discount_code,      // codice sconto opzionale
+        discount_value,     // valore dello sconto opzionale
+        session_id          // id sessione carrello
     } = req.body;
 
 
 
     /*
-    ==========================================
-    MODIFICA IMPORTANTE - VALIDAZIONE PREZZI
-    ==========================================
-
-    NON utilizziamo il prezzo inviato dal frontend.
-
-    Il prezzo viene recuperato dal database per evitare
-    manipolazioni della richiesta HTTP.
+    =================================================
+    VALIDAZIONE DATI CLIENTE
+    =================================================
+    controlliamo che tutti i dati principali siano presenti
+    e che rispettino un formato minimo accettabile
     */
 
+    // validiamo il nome
+    if (!customer_name || customer_name.trim().length < 2) {
+        return res.status(400).json({ error: "Nome non valido" });
+    }
+
+    // validiamo il cognome
+    if (!customer_lastname || customer_lastname.trim().length < 2) {
+        return res.status(400).json({ error: "Cognome non valido" });
+    }
+
+    // regex per validare il numero di telefono
+    const phoneRegex = /^[0-9+ ]{8,15}$/;
+
+    // controlliamo che il telefono sia valido
+    if (!customer_phone || !phoneRegex.test(customer_phone)) {
+        return res.status(400).json({ error: "Telefono non valido" });
+    }
+
+    // regex per validare l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // controlliamo che l'email sia valida
+    if (!customer_email || !emailRegex.test(customer_email)) {
+        return res.status(400).json({ error: "Email non valida" });
+    }
+
+    // validiamo indirizzo spedizione
+    if (!customer_address || customer_address.trim().length < 5) {
+        return res.status(400).json({ error: "Indirizzo di spedizione non valido" });
+    }
+
+    // validiamo indirizzo fatturazione
+    if (!customer_billing_address || customer_billing_address.trim().length < 5) {
+        return res.status(400).json({ error: "Indirizzo di fatturazione non valido" });
+    }
+
+    // controlliamo che esista almeno un prodotto nell'ordine
+    if (!products || !Array.isArray(products) || products.length === 0) {
+        return res.status(400).json({ error: "Nessun prodotto nell'ordine" });
+    }
+
+
+
+    /*
+    =================================================
+    VALIDAZIONE PREZZI
+    =================================================
+
+    per sicurezza NON utilizziamo il prezzo inviato
+    dal frontend, perché potrebbe essere manipolato.
+
+    recuperiamo il prezzo reale dal database.
+    */
+
+    // inizializziamo il subtotale dell'ordine
     let subtotal_amount = 0;
 
+    // array che conterrà i prodotti completi recuperati dal DB
     const orderedProducts = [];
 
+    // contatore per sapere quando tutte le query sono terminate
     let completedQueries = 0;
 
 
@@ -144,32 +195,44 @@ function checkout(req, res) {
     // ciclo sui prodotti inviati dal frontend
     products.forEach(prod => {
 
-        // query per recuperare il prodotto reale
+        // controlliamo che il prodotto abbia id e quantità validi
+        if (!prod.id || !prod.quantity || prod.quantity <= 0) {
+            return;
+        }
+
+        // query per recuperare nome, descrizione e prezzo reale del prodotto
         const sqlProduct = `
             SELECT name, description, price
             FROM products
             WHERE id = ?
         `;
 
+        // eseguiamo la query
         connection.query(sqlProduct, [prod.id], (err, productResults) => {
 
+            // se il prodotto non esiste o c'è errore lo segnaliamo
             if (err || productResults.length === 0) {
                 console.log("Errore recupero prodotto:", err || "Product not found");
                 return;
             }
 
+            // recuperiamo il prodotto dal database
             const productData = productResults[0];
+
 
 
             /*
             ==========================================
-            MODIFICA - CALCOLO SUBTOTAL DAL DATABASE
+            CALCOLO SUBTOTALE ORDINE
             ==========================================
             */
 
+            // aggiungiamo il prezzo * quantità al subtotale
             subtotal_amount += productData.price * prod.quantity;
 
 
+
+            // salviamo i dati completi del prodotto per email e DB
             orderedProducts.push({
                 id: prod.id,
                 name: productData.name,
@@ -178,6 +241,7 @@ function checkout(req, res) {
                 price: productData.price
             });
 
+            // aumentiamo il contatore delle query completate
             completedQueries++;
 
 
@@ -185,6 +249,7 @@ function checkout(req, res) {
             // quando tutte le query dei prodotti sono terminate
             if (completedQueries === products.length) {
 
+                // arrotondiamo il subtotale a due decimali
                 subtotal_amount = parseFloat(subtotal_amount.toFixed(2));
 
 
@@ -195,26 +260,43 @@ function checkout(req, res) {
                 ==========================================
                 */
 
+                // convertiamo lo sconto in numero
                 let final_discount_value = Number(discount_value) || 0;
 
+                // evitiamo che lo sconto superi il subtotale
                 if (final_discount_value > subtotal_amount) {
                     final_discount_value = subtotal_amount;
                 }
 
 
 
+                /*
+                ==========================================
+                CALCOLO TOTALE DOPO SCONTO
+                ==========================================
+                */
+
+                // sottraiamo lo sconto dal subtotale
                 let total_after_discount = subtotal_amount - final_discount_value;
 
 
 
                 /*
                 ==========================================
-                NUOVA LOGICA - SPEDIZIONE
+                CALCOLO SPEDIZIONE
                 ==========================================
                 */
 
+                // costo base spedizione
+                const SHIPPING_COST = 3.99;
+
+                // soglia per spedizione gratuita
+                const FREE_SHIPPING_THRESHOLD = 70;
+
+                // inizializziamo il costo spedizione
                 let shipping_cost = SHIPPING_COST;
 
+                // se il totale supera la soglia la spedizione diventa gratuita
                 if (total_after_discount >= FREE_SHIPPING_THRESHOLD) {
                     shipping_cost = 0;
                 }
@@ -227,39 +309,41 @@ function checkout(req, res) {
                 ==========================================
                 */
 
+                // aggiungiamo il costo spedizione al totale
                 let total_amount = total_after_discount + shipping_cost;
 
+                // arrotondiamo il totale finale
                 total_amount = parseFloat(total_amount.toFixed(2));
 
 
 
                 /*
                 ==========================================
-                CREAZIONE ORDINE
+                CREAZIONE ORDINE NEL DATABASE
                 ==========================================
                 */
 
                 const sqlOrder = `
                     INSERT INTO orders
                     (
-                    customer_name,
-                    customer_lastname,
-                    customer_phone,
-                    customer_email,
-                    customer_address,
-                    customer_billing_address,
-                    subtotal_amount,
-                    total_amount,
-                    discount_code,
-                    discount_value,
-                    shipping_cost,
-                    session_id,
-                    created_date
+                        customer_name,
+                        customer_lastname,
+                        customer_phone,
+                        customer_email,
+                        customer_address,
+                        customer_billing_address,
+                        subtotal_amount,
+                        total_amount,
+                        discount_code,
+                        discount_value,
+                        shipping_cost,
+                        session_id,
+                        created_date
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())  
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 `;
 
-
+                // eseguiamo la query di inserimento ordine
                 connection.query(
                     sqlOrder,
                     [
@@ -278,11 +362,13 @@ function checkout(req, res) {
                     ],
                     (err, orderResults) => {
 
+                        // gestione errore database
                         if (err) {
                             console.log(err);
                             return res.status(500).json({ error: "Database query failed" });
                         }
 
+                        // recuperiamo l'id dell'ordine appena creato
                         const order_id = orderResults.insertId;
 
 
@@ -313,15 +399,12 @@ function checkout(req, res) {
 
 
                         /*
-                        ==========================================
-                        COSTRUZIONE TABELLA EMAIL
-                        ==========================================
+                        COSTRUIAMO LA TABELLA DEI PRODOTTI PER L'EMAIL
                         */
 
                         let productsHtml = "";
 
                         orderedProducts.forEach(product => {
-
                             productsHtml += `
                                 <tr>
                                     <td>${product.name}</td>
@@ -335,9 +418,7 @@ function checkout(req, res) {
 
 
                         /*
-                        ==========================================
-                        CONTENUTO EMAIL
-                        ==========================================
+                        CREIAMO IL CONTENUTO HTML DELL'EMAIL
                         */
 
                         const htmlContent = `
@@ -345,7 +426,20 @@ function checkout(req, res) {
 
                             <p>Ciao ${customer_name} ${customer_lastname},</p>
 
-                            <p>Grazie per il tuo acquisto!</p>
+                            <p>Grazie per il tuo acquisto! Il tuo ordine è stato ricevuto.</p>
+
+                            <h3>Dati cliente</h3>
+                            <p>
+                                Nome: ${customer_name} ${customer_lastname}<br>
+                                Telefono: ${customer_phone}<br>
+                                Email: ${customer_email}
+                            </p>
+
+                            <h3>Indirizzo spedizione</h3>
+                            <p>${customer_address}</p>
+
+                            <h3>Indirizzo fatturazione</h3>
+                            <p>${customer_billing_address}</p>
 
                             <h3>Prodotti acquistati</h3>
 
@@ -363,27 +457,38 @@ function checkout(req, res) {
                                 </tbody>
                             </table>
 
+                            <h3>Sconto applicato</h3>
+                            <p>
+                                Codice sconto: ${discount_code ? discount_code : 'Nessuno'}<br>
+                                Valore: ${final_discount_value > 0 ? `- ${final_discount_value.toFixed(2)} €` : '- 0.00 €'}
+                            </p>
+
                             <p>Spedizione: ${shipping_cost.toFixed(2)} €</p>
 
                             <h3>Totale ordine: ${total_amount.toFixed(2)} €</h3>
+
                             <p>ID ordine: ${order_id}</p>
+
+                            <p>Grazie per aver acquistato su BoolZip!</p>
                         `;
 
+                        // importiamo la funzione che invia l'email
+                        const { sendOrderConfirmationEmail } = require('../utils/mail');
 
-
+                        // inviamo l'email di conferma ordine al cliente
                         sendOrderConfirmationEmail(
                             customer_email,
                             "Conferma ordine BoolZip",
                             htmlContent
                         );
 
-
-
+                        // ritorniamo la risposta al frontend
                         res.status(201).json({
                             message: "Order created and confirmation email sent",
                             id: order_id,
-                            total_amount: total_amount.toFixed(2),
+                            subtotal_amount: subtotal_amount.toFixed(2),
                             shipping_cost: shipping_cost.toFixed(2),
+                            total_amount: total_amount.toFixed(2),
                             discount_value: final_discount_value.toFixed(2)
                         });
 
