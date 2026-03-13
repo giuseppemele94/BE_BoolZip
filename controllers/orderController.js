@@ -467,8 +467,6 @@ function checkout(req, res) {
 
                             <h3>Totale ordine: ${total_amount.toFixed(2)} €</h3>
 
-                            <p>ID ordine: ${order_id}</p>
-
                             <p>Grazie per aver acquistato su BoolZip!</p>
                         `;
 
