@@ -1,3 +1,7 @@
+// ==============================
+// IMPORT
+// ==============================
+
 // importiamo la connessione al database
 const connection = require('../db/dbConnection');
 
@@ -5,7 +9,19 @@ const connection = require('../db/dbConnection');
 const { sendOrderConfirmationEmail } = require('../utils/mail');
 
 
-// funzione per ottenere tutti gli ordini
+// ==============================
+// COSTANTI SPEDIZIONE
+// ==============================
+// (NUOVA LOGICA INTRODOTTA)
+
+const FREE_SHIPPING_THRESHOLD = 70.00;
+const SHIPPING_COST = 4.00;
+
+
+
+// ==============================
+// FUNZIONE: OTTENERE TUTTI GLI ORDINI
+// ==============================
 function index(req, res) {
 
     // query SQL per prendere tutti gli ordini
@@ -26,8 +42,9 @@ function index(req, res) {
 
 
 
-
-//funzione per ottenere un singolo ordine con i prodotti collegati
+// ==============================
+// FUNZIONE: ORDINE SINGOLO
+// ==============================
 function show(req, res) {
 
     // prendiamo l'id dell'ordine dai parametri della rotta
@@ -55,32 +72,24 @@ function show(req, res) {
         WHERE order_product.order_id = ?
     `;
 
-    // eseguiamo la prima query (ordine)
+    // eseguiamo la prima query
     connection.query(orderSql, [id], (err, orderResults) => {
 
         if (err) return res.status(500).json({ error: 'Database query failed' });
 
-        // se non esiste l'ordine
         if (orderResults.length === 0) {
             return res.status(404).json({ error: 'Order not found' });
         }
 
-        // salviamo l'ordine
         const order = orderResults[0];
 
-
-
-        // seconda query per recuperare i prodotti dell'ordine
+        // recuperiamo i prodotti dell'ordine
         connection.query(productsSql, [id], (err, productResults) => {
 
             if (err) return res.status(500).json({ error: 'Database query failed' });
 
-
-            // aggiungiamo i prodotti dentro l'oggetto ordine
             order.products = productResults;
 
-
-            // ritorniamo l'ordine con i prodotti
             res.json(order);
 
         });
@@ -91,171 +100,10 @@ function show(req, res) {
 
 
 
-
-// // funzione per creare un nuovo ordine (checkout)
-// function store(req, res) {
-
-//     // recuperiamo i dati dal body
-//     const {
-//         customer_name,
-//         customer_lastname,
-//         customer_phone,
-//         customer_email,
-//         customer_address,
-//         customer_billing_address,
-//         total_amount,
-//         discount_code,
-//         discount_value,
-//         session_id
-//     } = req.body;
-
-//     // query SQL per inserire un nuovo ordine
-//     const sql = `
-//         INSERT INTO orders
-//         (
-//             customer_name,
-//             customer_lastname,
-//             customer_phone,
-//             customer_email,
-//             customer_address,
-//             customer_billing_address,
-//             total_amount,
-//             discount_code,
-//             discount_value,
-//             session_id,
-//             created_date
-//         )
-//         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-//     `;
-
-//     // eseguiamo la query
-//     connection.query(
-//         sql,
-//         [
-//             customer_name,
-//             customer_lastname,
-//             customer_phone,
-//             customer_email,
-//             customer_address,
-//             customer_billing_address,
-//             total_amount,
-//             discount_code,
-//             discount_value,
-//             session_id
-//         ],
-//         (err, results) => {
-
-//             if (err) {
-//                 console.log(err);
-//                 return res.status(500).json({
-//                     error: "Database query failed"
-//                 });
-//             }
-
-//             /* 
-//                PREPARAZIONE CONTENUTO EMAIL DI CONFERMA ORDINE
-//                costruiamo il contenuto HTML della mail che verrà inviata al cliente
-//             */
-//             const htmlContent = `
-//                 <h2>Grazie per il tuo ordine, ${customer_name}!</h2>
-//                 <p>Il tuo ordine è stato ricevuto correttamente.</p>
-//                 <p><strong>ID Ordine:</strong> ${results.insertId}</p>
-//                 <p><strong>Totale ordine:</strong> €${total_amount}</p>
-//                 <p>Ti contatteremo presto per la spedizione.</p>
-//             `;
-
-//             /*
-//                INVIO EMAIL DI CONFERMA ORDINE
-//                utilizziamo la funzione sendOrderConfirmationEmail definita in utils/mail.js
-//                passando:
-//                - email del cliente
-//                - oggetto della mail
-//                - contenuto HTML della mail
-//             */
-//             sendOrderConfirmationEmail(
-//                 customer_email,
-//                 "Conferma ordine BoolZip",
-//                 htmlContent
-//             );
-
-//             // ritorniamo l'id dell'ordine appena creato
-//             res.status(201).json({
-//                 message: "Order created",
-
-//                 // insertId è l'id generato automaticamente dal database
-//                 id: results.insertId
-//             });
-
-//         }
-//     );
-// }
-
-
-
-// // funzione per aggiungere un prodotto ad un ordine
-// function addProductToOrder(req, res) {
-
-//     // recuperiamo l'id dell'ordine dai parametri della richiesta
-//     const order_id = req.params.id;
-
-//     // recuperiamo product_id e quantity dal body della richiesta JSON
-//     const { product_id, quantity } = req.body;
-
-//     // query SQL per prendere il prezzo del prodotto dal database
-//     const productSql = `SELECT price FROM products WHERE id = ?`;
-
-//     // eseguiamo la query per ottenere il prezzo del prodotto
-//     connection.query(productSql, [product_id], (err, productResults) => {
-
-//         // se c'è un errore nella query, ritorniamo errore 500
-//         if (err) {
-//             return res.status(500).json({ error: "Database query failed" });
-//         }
-
-//         // se il prodotto non esiste nel database, ritorniamo errore 404
-//         if (productResults.length === 0) {
-//             return res.status(404).json({ error: "Product not found" });
-//         }
-
-//         // salviamo il prezzo del prodotto in una costante
-//         const price = productResults[0].price;
-
-//         // query SQL per inserire il prodotto nella tabella order_product
-//         const orderProductSql = `
-//             INSERT INTO order_product
-//             (order_id, product_id, quantity, price)
-//             VALUES (?, ?, ?, ?)
-//         `;
-
-//         // eseguiamo la query di inserimento nella tabella order_product
-//         connection.query(
-//             orderProductSql,
-//             [order_id, product_id, quantity, price], // valori da inserire
-//             (err, results) => {
-
-//                 // se c'è un errore durante l'inserimento, logghiamolo e ritorniamo errore 500
-//                 if (err) {
-//                     console.log(err);
-//                     return res.status(500).json({
-//                         error: "Database query failed"
-//                     });
-//                 }
-
-//                 // se tutto va bene, ritorniamo status 201 con messaggio di conferma
-//                 res.status(201).json({
-//                     message: "Product added to order"
-//                 });
-
-//             }
-//         );
-
-//     });
-
-// }
-
-
-
-// funzione di checkout: crea un ordine, aggiunge prodotti e invia email di conferma
+// ==============================
+// FUNZIONE: CHECKOUT ORDINE
+// ==============================
+// crea un ordine, aggiunge prodotti e invia email
 function checkout(req, res) {
 
     // recuperiamo i dati dal body della richiesta
@@ -266,125 +114,214 @@ function checkout(req, res) {
         customer_email,
         customer_address,
         customer_billing_address,
-        products,           // array di prodotti {id, quantity, price}
-        discount_code,      // opzionale
-        discount_value,     // opzionale
+        products,           // array prodotti {id, quantity}
+        discount_code,
+        discount_value,
         session_id
     } = req.body;
 
-    // calcoliamo il totale dell'ordine partendo dai prodotti
-    let subtotal_amount = products.reduce(
-        (acc, prod) => acc + prod.price * prod.quantity,
-        0
-    );
 
-    subtotal_amount = parseFloat(subtotal_amount.toFixed(2));
 
-    // Applico lo sconto, se presente
-    let final_discount_value = Number(discount_value) || 0;
+    /*
+    ==========================================
+    MODIFICA IMPORTANTE - VALIDAZIONE PREZZI
+    ==========================================
 
-    // Evito che lo sconto superi il subtotale
-    if (final_discount_value > subtotal_amount) {
-        final_discount_value = subtotal_amount;
-    }
+    NON utilizziamo il prezzo inviato dal frontend.
 
-    // Calcolo il totale finale da salvare
-    let total_amount = subtotal_amount - final_discount_value;
+    Il prezzo viene recuperato dal database per evitare
+    manipolazioni della richiesta HTTP.
+    */
 
-    // Arrotondo il totale finale
-    total_amount = parseFloat(total_amount.toFixed(2));
+    let subtotal_amount = 0;
 
-    // query SQL per inserire l'ordine nella tabella orders
-    const sqlOrder = `
-        INSERT INTO orders
-        (
-            customer_name,
-            customer_lastname,
-            customer_phone,
-            customer_email,
-            customer_address,
-            customer_billing_address,
-            total_amount,
-            discount_code,
-            discount_value,
-            session_id,
-            created_date
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    `;
+    const orderedProducts = [];
 
-    // eseguiamo la query per creare l'ordine
-    connection.query(
-        sqlOrder,
-        [
-            customer_name,
-            customer_lastname,
-            customer_phone,
-            customer_email,
-            customer_address,
-            customer_billing_address,
-            total_amount,
-            discount_code || null, // se non presente, inseriamo null
-            discount_value,   // se non presente, inseriamo 0
-            session_id
-        ],
-        (err, orderResults) => {
+    let completedQueries = 0;
 
-            if (err) {
-                console.log(err);
-                return res.status(500).json({ error: "Database query failed" });
+
+
+    // ciclo sui prodotti inviati dal frontend
+    products.forEach(prod => {
+
+        // query per recuperare il prodotto reale
+        const sqlProduct = `
+            SELECT name, description, price
+            FROM products
+            WHERE id = ?
+        `;
+
+        connection.query(sqlProduct, [prod.id], (err, productResults) => {
+
+            if (err || productResults.length === 0) {
+                console.log("Errore recupero prodotto:", err || "Product not found");
+                return;
             }
 
-            // salviamo l'id dell'ordine appena creato
-            const order_id = orderResults.insertId;
+            const productData = productResults[0];
 
-            // ciclo asincrono per recuperare descrizione e inserire in order_product
-            const orderedProducts = [];
 
-            products.forEach(prod => {
+            /*
+            ==========================================
+            MODIFICA - CALCOLO SUBTOTAL DAL DATABASE
+            ==========================================
+            */
 
-                // query per prendere la descrizione e il nome del prodotto dal DB
-                const sqlProduct = `SELECT name, description, price FROM products WHERE id = ?`;
+            subtotal_amount += productData.price * prod.quantity;
 
-                connection.query(sqlProduct, [prod.id], (err, productResults) => {
 
-                    if (err || productResults.length === 0) {
-                        console.log("Errore recupero prodotto:", err || "Product not found");
-                        return;
-                    }
+            orderedProducts.push({
+                id: prod.id,
+                name: productData.name,
+                description: productData.description,
+                quantity: prod.quantity,
+                price: productData.price
+            });
 
-                    const productData = productResults[0];
+            completedQueries++;
 
-                    // inseriamo il prodotto nella tabella order_product
-                    const sqlOrderProduct = `
-                        INSERT INTO order_product
-                        (order_id, product_id, quantity, price)
-                        VALUES (?, ?, ?, ?)
-                    `;
 
-                    connection.query(
-                        sqlOrderProduct,
-                        [order_id, prod.id, prod.quantity, productData.price],
-                        (err) => { if (err) console.log(err); }
-                    );
 
-                    // aggiungiamo i dati completi del prodotto per l'email
-                    orderedProducts.push({
-                        name: productData.name,
-                        description: productData.description,
-                        quantity: prod.quantity,
-                        price: productData.price
-                    });
+            // quando tutte le query dei prodotti sono terminate
+            if (completedQueries === products.length) {
 
-                    // quando tutti i prodotti sono pronti, inviamo l'email
-                    if (orderedProducts.length === products.length) {
+                subtotal_amount = parseFloat(subtotal_amount.toFixed(2));
+
+
+
+                /*
+                ==========================================
+                CALCOLO SCONTO
+                ==========================================
+                */
+
+                let final_discount_value = Number(discount_value) || 0;
+
+                if (final_discount_value > subtotal_amount) {
+                    final_discount_value = subtotal_amount;
+                }
+
+
+
+                let total_after_discount = subtotal_amount - final_discount_value;
+
+
+
+                /*
+                ==========================================
+                NUOVA LOGICA - SPEDIZIONE
+                ==========================================
+                */
+
+                let shipping_cost = SHIPPING_COST;
+
+                if (total_after_discount >= FREE_SHIPPING_THRESHOLD) {
+                    shipping_cost = 0;
+                }
+
+
+
+                /*
+                ==========================================
+                CALCOLO TOTALE FINALE
+                ==========================================
+                */
+
+                let total_amount = total_after_discount + shipping_cost;
+
+                total_amount = parseFloat(total_amount.toFixed(2));
+
+
+
+                /*
+                ==========================================
+                CREAZIONE ORDINE
+                ==========================================
+                */
+
+                const sqlOrder = `
+                    INSERT INTO orders
+                    (
+                    customer_name,
+                    customer_lastname,
+                    customer_phone,
+                    customer_email,
+                    customer_address,
+                    customer_billing_address,
+                    subtotal_amount,
+                    total_amount,
+                    discount_code,
+                    discount_value,
+                    shipping_cost,
+                    session_id,
+                    created_date
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())  
+                `;
+
+
+                connection.query(
+                    sqlOrder,
+                    [
+                        customer_name,
+                        customer_lastname,
+                        customer_phone,
+                        customer_email,
+                        customer_address,
+                        customer_billing_address,
+                        subtotal_amount,
+                        total_amount,
+                        discount_code || null,
+                        final_discount_value,
+                        shipping_cost,
+                        session_id
+                    ],
+                    (err, orderResults) => {
+
+                        if (err) {
+                            console.log(err);
+                            return res.status(500).json({ error: "Database query failed" });
+                        }
+
+                        const order_id = orderResults.insertId;
+
+
 
                         /*
-                            COSTRUIAMO LA TABELLA DEI PRODOTTI PER L'EMAIL
+                        ==========================================
+                        INSERIMENTO PRODOTTI NELLA TABELLA
+                        order_product
+                        ==========================================
                         */
+
+                        orderedProducts.forEach(product => {
+
+                            const sqlOrderProduct = `
+                                INSERT INTO order_product
+                                (order_id, product_id, quantity, price)
+                                VALUES (?, ?, ?, ?)
+                            `;
+
+                            connection.query(
+                                sqlOrderProduct,
+                                [order_id, product.id, product.quantity, product.price],
+                                (err) => { if (err) console.log(err); }
+                            );
+
+                        });
+
+
+
+                        /*
+                        ==========================================
+                        COSTRUZIONE TABELLA EMAIL
+                        ==========================================
+                        */
+
                         let productsHtml = "";
 
                         orderedProducts.forEach(product => {
+
                             productsHtml += `
                                 <tr>
                                     <td>${product.name}</td>
@@ -395,30 +332,23 @@ function checkout(req, res) {
                             `;
                         });
 
+
+
                         /*
-                            CREIAMO IL CONTENUTO HTML DELL'EMAIL
+                        ==========================================
+                        CONTENUTO EMAIL
+                        ==========================================
                         */
+
                         const htmlContent = `
                             <h2>Conferma ordine</h2>
 
                             <p>Ciao ${customer_name} ${customer_lastname},</p>
 
-                            <p>Grazie per il tuo acquisto! Il tuo ordine è stato ricevuto.</p>
-
-                            <h3>Dati cliente</h3>
-                            <p>
-                                Nome: ${customer_name} ${customer_lastname}<br>
-                                Telefono: ${customer_phone}<br>
-                                Email: ${customer_email}
-                            </p>
-
-                            <h3>Indirizzo spedizione</h3>
-                            <p>${customer_address}</p>
-
-                            <h3>Indirizzo fatturazione</h3>
-                            <p>${customer_billing_address}</p>
+                            <p>Grazie per il tuo acquisto!</p>
 
                             <h3>Prodotti acquistati</h3>
+
                             <table border="1" cellpadding="5" cellspacing="0">
                                 <thead>
                                     <tr>
@@ -433,52 +363,49 @@ function checkout(req, res) {
                                 </tbody>
                             </table>
 
-                            <h3>Sconto applicato</h3>
-                                <p>
-                                Codice sconto: ${discount_code ? discount_code : 'Nessuno'}<br>
-                                Valore: ${final_discount_value > 0 ? `- ${final_discount_value.toFixed(2)} €` : '- 0.00 €'}
-                                </p>
+                            <p>Spedizione: ${shipping_cost.toFixed(2)} €</p>
 
-                            
-                            <h3>Totale ordine:  ${total_amount.toFixed(2)} €</h3>
+                            <h3>Totale ordine: ${total_amount.toFixed(2)} €</h3>
                             <p>ID ordine: ${order_id}</p>
-
-                            <p>Grazie per aver acquistato su BoolZip!</p>
                         `;
 
-                        // importiamo la funzione da mail.js
-                        const { sendOrderConfirmationEmail } = require('../utils/mail');
 
-                        // inviamo l'email di conferma ordine
+
                         sendOrderConfirmationEmail(
                             customer_email,
                             "Conferma ordine BoolZip",
                             htmlContent
                         );
 
-                        // ritorniamo la risposta al frontend
+
+
                         res.status(201).json({
                             message: "Order created and confirmation email sent",
                             id: order_id,
                             total_amount: total_amount.toFixed(2),
-                            discount_value: discount_value ? discount_value.toFixed(2) : "0.00"
+                            shipping_cost: shipping_cost.toFixed(2),
+                            discount_value: final_discount_value.toFixed(2)
                         });
+
                     }
+                );
 
-                });
+            }
 
-            });
+        });
 
-        }
-    );
+    });
 
 }
 
-// esportiamo le funzioni
+
+
+// ==============================
+// EXPORT
+// ==============================
+
 module.exports = {
     index,
     show,
-    // store,
-    // addProductToOrder,
     checkout
 };
