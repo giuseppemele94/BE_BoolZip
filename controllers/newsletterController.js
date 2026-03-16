@@ -25,6 +25,23 @@ function storeNewsletterEmail(req, res) {
         return res.status(400).json({ error: "Email is required" });
     }
 
+    // controlliamo se l'email esiste già
+    const checkEmailSql = "SELECT id FROM newsletter WHERE email = ?";
+
+    connection.query(checkEmailSql, [email], (err, results) => {
+
+        if (err) {
+            return res.status(500).json({ error: "Database error" });
+        }
+
+        // se esiste già non la inseriamo di nuovo
+        if (results.length > 0) {
+            return res.status(409).json({
+                message: "Email già iscritta alla newsletter"
+            });
+        }
+    });
+
     // query SQL per inserire l'email nella tabella newsletter
     const sql = "INSERT INTO newsletter (email) VALUES (?)";
 
