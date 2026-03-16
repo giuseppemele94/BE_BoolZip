@@ -12,6 +12,14 @@ function storeNewsletterEmail(req, res) {
     // recuperiamo l'email dal body della richiesta
     const { email } = req.body;
 
+    // regex per validare l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // controlliamo che l'email sia valida
+    if (!email || !emailRegex.test(email)) {
+        return res.status(400).json({ error: "Email non valida" });
+    }
+
     // controllo che l'email sia stata inviata
     if (!email) {
         return res.status(400).json({ error: "Email is required" });
