@@ -221,7 +221,7 @@ function getRecentProducts(req, res) {
   const sql = `
     SELECT *
     FROM products
-    WHERE created_at >= NOW() - INTERVAL 10 DAY
+    WHERE created_at >= NOW() - INTERVAL 15 DAY
     ORDER BY created_at DESC
     LIMIT 4
   `;
