@@ -1,6 +1,7 @@
 // importiamo la connessione al database
 const connection = require("../db/dbConnection");
 
+
 // importiamo la funzione per inviare email
 const { sendOrderConfirmationEmail } = require("../utils/mail");
 
@@ -66,10 +67,40 @@ function storeNewsletterEmail(req, res) {
             }
             //  Costruiamo il contenuto HTML dell'email di ringraziamento
             const htmlContent = `
-                <h2>Grazie per esserti iscritto!</h2>
-                <p>Ciao! Grazie per aver condiviso la tua email con noi. Benvenuto su <strong>BoolZip</strong>!</p>
-                <p>Ti terremo aggiornato sulle nostre novità e promozioni.</p>
-            `;
+                                <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+                                <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+
+                                    <!-- Immagine header -->
+                                    <img src="https://i.imgur.com/5oet7UF.jpeg" alt="Welcome" style="width: 100%; display: block;">
+
+                                    <div style="padding: 20px; text-align: center;">
+                                    <h2 style="color: #333;">Benvenuto su BoolZip 🎉</h2>
+
+                                    <p style="color: #555; font-size: 16px;">
+                                        Grazie per esserti iscritto! Siamo felici di averti con noi 🚀
+                                    </p>
+
+                                    <p style="color: #777; font-size: 14px;">
+                                        Ti terremo aggiornato su novità, funzionalità e promozioni esclusive.
+                                    </p>
+
+                                    <!-- Bottone -->
+                                    <a href="http://localhost:5173/"
+                                        style="display: inline-block; margin-top: 20px; padding: 12px 25px;
+                                                background-color: #4CAF50; color: #ffffff; text-decoration: none;
+                                                border-radius: 5px; font-weight: bold;">
+                                        Scopri BoolZip
+                                    </a>
+                                    </div>
+
+                                    <!-- Footer -->
+                                    <div style="background: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #aaa;">
+                                    © 2026 BoolZip - Tutti i diritti riservati
+                                    </div>
+
+                                </div>
+                                </div>
+                                `;
 
             // inviamo l'email di ringraziamento
             try {

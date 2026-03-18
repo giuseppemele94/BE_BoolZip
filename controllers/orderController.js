@@ -426,54 +426,72 @@ function checkout(req, res) {
                         CREIAMO IL CONTENUTO HTML DELL'EMAIL
                         */
 
-                        const htmlContent = `
-                            <h2>Conferma ordine</h2>
+                       const htmlContent = `
+                                        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
 
-                            <p>Ciao ${customer_name} ${customer_lastname},</p>
+                                            <div style="text-align: center; margin-bottom: 20px;">
+                                                 <img src="https://i.imgur.com/7xnILGS.jpeg" alt="BoolZip" style="max-width: 180px;">
+                                            </div>
 
-                            <p>Grazie per il tuo acquisto! Il tuo ordine è stato ricevuto.</p>
+                                            <h2 style="color: #111;">Conferma ordine</h2>
 
-                            <h3>Dati cliente</h3>
-                            <p>
-                                Nome: ${customer_name} ${customer_lastname}<br>
-                                Telefono: ${customer_phone}<br>
-                                Email: ${customer_email}
-                            </p>
+                                            <p>Ciao <strong>${customer_name} ${customer_lastname}</strong>,</p>
 
-                            <h3>Indirizzo spedizione</h3>
-                            <p>${customer_address}</p>
+                                            <p>Grazie per il tuo acquisto! Il tuo ordine è stato ricevuto 🎉</p>
 
-                            <h3>Indirizzo fatturazione</h3>
-                            <p>${customer_billing_address}</p>
+                                            <h3 style="margin-top: 20px; color: #222;">Dati cliente</h3>
+                                            <p style="background: #f9f9f9; padding: 10px; border-radius: 5px;">
+                                                Nome: ${customer_name} ${customer_lastname}<br>
+                                                Telefono: ${customer_phone}<br>
+                                                Email: ${customer_email}
+                                            </p>
 
-                            <h3>Prodotti acquistati</h3>
+                                            <h3 style="margin-top: 20px; color: #222;">Indirizzo spedizione</h3>
+                                            <p style="background: #f9f9f9; padding: 10px; border-radius: 5px;">
+                                                ${customer_address}
+                                            </p>
 
-                            <table border="1" cellpadding="5" cellspacing="0">
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Descrizione</th>
-                                        <th>Quantità</th>
-                                        <th>Prezzo</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${productsHtml}
-                                </tbody>
-                            </table>
+                                            <h3 style="margin-top: 20px; color: #222;">Indirizzo fatturazione</h3>
+                                            <p style="background: #f9f9f9; padding: 10px; border-radius: 5px;">
+                                                ${customer_billing_address}
+                                            </p>
 
-                            <h3>Sconto applicato</h3>
-                            <p>
-                                Codice sconto: ${discount_code ? discount_code : 'Nessuno'}<br>
-                                Valore: ${final_discount_value > 0 ? `- ${final_discount_value.toFixed(2)} €` : '- 0.00 €'}
-                            </p>
+                                            <h3 style="margin-top: 20px; color: #222;">Prodotti acquistati</h3>
 
-                            <p>Spedizione: ${shipping_cost.toFixed(2)} €</p>
+                                            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                                                <thead>
+                                                    <tr style="background-color: #f4f4f4;">
+                                                        <th style="padding: 8px; border: 1px solid #ddd;">Nome</th>
+                                                        <th style="padding: 8px; border: 1px solid #ddd;">Descrizione</th>
+                                                        <th style="padding: 8px; border: 1px solid #ddd;">Quantità</th>
+                                                        <th style="padding: 8px; border: 1px solid #ddd;">Prezzo</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${productsHtml}
+                                                </tbody>
+                                            </table>
 
-                            <h3>Totale ordine: ${total_amount.toFixed(2)} €</h3>
+                                            <h3 style="margin-top: 20px; color: #222;">Sconto applicato</h3>
+                                            <p style="background: #f9f9f9; padding: 10px; border-radius: 5px;">
+                                                Codice sconto: ${discount_code ? discount_code : 'Nessuno'}<br>
+                                                Valore: ${final_discount_value > 0 ? `<span style="color: #e53935;">- ${final_discount_value.toFixed(2)} €</span>` : '- 0.00 €'}
+                                            </p>
 
-                            <p>Grazie per aver acquistato su BoolZip!</p>
-                        `;
+                                            <p style="margin-top: 10px;">
+                                                Spedizione: <strong>${shipping_cost.toFixed(2)} €</strong>
+                                            </p>
+
+                                            <h3 style="margin-top: 20px; color: #000;">
+                                                Totale ordine: <span style="color: #4CAF50;">${total_amount.toFixed(2)} €</span>
+                                            </h3>
+
+                                            <p style="margin-top: 20px;">
+                                                Grazie per aver acquistato su <strong>BoolZip</strong> ❤️
+                                            </p>
+
+                                        </div>
+                                        `;
 
                         // importiamo la funzione che invia l'email
                         const { sendOrderConfirmationEmail } = require('../utils/mail');
