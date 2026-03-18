@@ -87,7 +87,7 @@ function storeNewsletterEmail(req, res) {
                                     <!-- Bottone -->
                                     <a href="http://localhost:5173/"
                                         style="display: inline-block; margin-top: 20px; padding: 12px 25px;
-                                                background-color: #4CAF50; color: #ffffff; text-decoration: none;
+                                                background-color: #d7192d; color: #ffffff; text-decoration: none;
                                                 border-radius: 5px; font-weight: bold;">
                                         Scopri BoolZip
                                     </a>
