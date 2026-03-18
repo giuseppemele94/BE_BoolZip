@@ -104,7 +104,7 @@ function show(req, res) {
 function checkout(req, res) {
 
     // recuperiamo i dati dal body della richiesta inviati dal frontend
-    const {
+    let {
         customer_name,
         customer_lastname,
         customer_phone,
@@ -156,6 +156,11 @@ function checkout(req, res) {
     // validiamo indirizzo spedizione
     if (!customer_address || customer_address.trim().length < 5) {
         return res.status(400).json({ error: "Indirizzo di spedizione non valido" });
+    }
+    // se l'indirizzo di fatturazione non è stato inserito,
+    // utilizziamo quello di spedizione
+    if (!customer_billing_address || customer_billing_address.trim() === "") {
+        customer_billing_address = customer_address;
     }
 
     // validiamo indirizzo fatturazione
