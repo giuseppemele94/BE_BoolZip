@@ -4,7 +4,7 @@ Backend del progetto Boolzip, sviluppato con Node.js ed Express.
 
 ---
 
-## 📌 Descrizione
+## 📖 Descrizione
 
 Questo progetto rappresenta il backend dell'applicazione Boolzip.
 
@@ -130,18 +130,18 @@ PORT=3000
 
 # Database MySQL
 DB_HOST=localhost
-DB_USER=YOUR_DB_USER_HERE
-DB_PASSWORD=YOUR_PASSWORD_HERE
-DB_NAME=YOUR_DB_NAME_HERE
+DB_USER=YOUR_DB_USER
+DB_PASSWORD=YOUR_PASSWORD
+DB_NAME=YOUR_DB_NAME
 
 # Configurazione SMTP (es. Mailtrap)
 MAIL_HOST=sandbox.smtp.mailtrap.io
-MAIL_PORT=YOUR_MAIL_PORT_HERE
-MAIL_USER=YOUR_MAIL_USER_HERE
-MAIL_PASS=YOUR_MAIL_PASSWORD_HERE
+MAIL_PORT=YOUR_MAIL_PORT
+MAIL_USER=YOUR_MAIL_USER
+MAIL_PASS=YOUR_MAIL_PASSWORD
 ```
 
-## ⚠️ Importante
+### ⚠️ Avvertenze
 
 I valori presenti nel file `.env` sono dei placeholder.
 
@@ -155,7 +155,7 @@ Senza queste configurazioni il server non funzionerà correttamente.
 
 ---
 
-## 📌 Funzionalità principali
+## 🔧 Funzionalità principali
 
 - Gestione API REST
 - Connessione a database MySQL
@@ -178,7 +178,7 @@ Senza queste configurazioni il server non funzionerà correttamente.
 ---
 
 
-## ⚠️ Requisiti di utilizzo
+## ℹ️ Requisiti di utilizzo
 
 - Node.js >= versione 18
 - MySQL attivo
